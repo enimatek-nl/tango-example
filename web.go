@@ -20,7 +20,9 @@ func main() {
 		web.Busy{})
 
 	tg.AddRoutes(
-		tango.NewRoute("/", &web.IndexController{}))
+		tango.NewRoute("/", &web.IndexController{}),
+		tango.NewRoute("/edit/:id", &web.EditController{}),
+	)
 
 	tg.Bootstrap()
 

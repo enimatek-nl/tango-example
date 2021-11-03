@@ -1,4 +1,11 @@
 <div>
+    <h1>Todo's</h1>
     <Busy show="busy"></Busy>
-    <button tng-click="newTodo"></button>
+    <button tng-click="add">add</button>
+
+    <table>
+        <tr tng-repeat="todo in todos">
+            <td tng-bind="todo.Title"></td>
+        </tr>
+    </table>
 </div>

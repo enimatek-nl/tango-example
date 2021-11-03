@@ -17,3 +17,16 @@ func (e *Api) Index(w http.ResponseWriter, req *http.Request) {
 		},
 	)
 }
+
+func (e *Api) Get(w http.ResponseWriter, req *http.Request) {
+	todos := []Todo{{
+		Title:   "Abc",
+		Content: "Def",
+		Done:    false,
+	}, {
+		Title:   "Def",
+		Content: "Ghi",
+		Done:    false,
+	}}
+	json.NewEncoder(w).Encode(todos)
+}
