@@ -22,37 +22,37 @@ func (i IndexController) Config() tango.ComponentConfig {
 	}
 }
 
-func (i IndexController) Hook(self *tango.Tango, scope *tango.Scope, hook tango.ComponentHook, attrs map[string]string, node js.Value, queue *tango.Queue) bool {
-	switch hook {
-	case tango.Construct:
-		scope.SetFunc("add", func(value js.Value, scope *tango.Scope) {
-			scope.Nav("/edit/0")
-		})
-		scope.Set("busy", js.ValueOf(true))
-		scope.Set("todos", js.ValueOf([]interface{}{}))
-	case tango.AfterRender:
-		go func() {
-			if resp, err := http.Get("/api/get"); err == nil {
-				var todos []server.Todo
-				// load all todos from api-backend
-				defer resp.Body.Close()
-				json.NewDecoder(resp.Body).Decode(&todos)
-
-				println(todos[0].Title)
-
-				y := make([]interface{}, len(todos))
-				for i, v := range todos {
-					y[i] = js.ValueOf(v)
-				}
-				scope.Set("todos", js.ValueOf(y))
-
-				// remove loading screen
-				scope.Set("busy", js.ValueOf(false))
-				scope.Digest()
-			}
-		}()
-	}
+func (i IndexController) Constructor(hook tango.Hook) bool {
+	// variables
+	hook.Scope.Set("busy", true) // enable loading overlay
+	hook.Scope.Set("todos", []server.Todo{})
+	// functions
+	hook.Scope.SetFunc("add", func(value js.Value, scope *tango.Scope) {
+		hook.Self.Nav("/edit/0")
+	})
+	hook.Scope.SetFunc("edit", func(value js.Value, scope *tango.Scope) {
+		if id, found := scope.Get("todo.ID"); found {
+			hook.Self.Nav("/edit/" + id.String())
+		}
+	})
 	return true
+}
+
+func (i IndexController) BeforeRender(hook tango.Hook) {}
+
+func (i IndexController) AfterRender(hook tango.Hook) {
+	go func() {
+		if resp, err := http.Get("/api/get"); err == nil {
+			var todos []server.Todo
+			// load all todos from api-backend
+			defer resp.Body.Close()
+			json.NewDecoder(resp.Body).Decode(&todos)
+			hook.Scope.Set("todos", todos)
+			// remove loading overlay
+			hook.Scope.Set("busy", false)
+			hook.Scope.Digest()
+		}
+	}()
 }
 
 func (i IndexController) Render() string {

@@ -8,3 +8,5 @@ type Todo struct {
 	Content string `gorm:"column:content"`
 	Done    bool   `gorm:"column:done"`
 }
+
+func (Todo) Bla() {}

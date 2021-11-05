@@ -6,6 +6,8 @@
     <table>
         <tr tng-repeat="todo in todos">
             <td tng-bind="todo.Title"></td>
+            <td tng-bind="todo.Content"></td>
+            <td><button tng-click="edit">edit</button></td>
         </tr>
     </table>
 </div>

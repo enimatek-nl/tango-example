@@ -29,6 +29,7 @@ func main() {
 	api := server.Api{Db: db}
 	http.HandleFunc("/api", api.Index)
 	http.HandleFunc("/api/get", api.Get)
+	http.HandleFunc("/api/post", api.Post)
 	http.Handle("/", http.FileServer(http.Dir(`./web/static/`)))
 
 	log.Fatal(http.ListenAndServe(":8000", nil))
