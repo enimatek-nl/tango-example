@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/json"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
+	"strconv"
 )
 
 type Api struct {
@@ -18,29 +20,47 @@ func (e *Api) Index(w http.ResponseWriter, req *http.Request) {
 	)
 }
 
-func (e *Api) Get(w http.ResponseWriter, req *http.Request) {
-	todos := []Todo{{
-		Title:   "Abc",
-		Content: "Def",
-		Done:    false,
-	}, {
-		Title:   "Def",
-		Content: "Ghi",
-		Done:    false,
-	}}
-	json.NewEncoder(w).Encode(todos)
-}
+func (e *Api) Process(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		log.Printf("Error parsing form: %s\n", err)
+		return
+	}
 
-func (e *Api) Post(w http.ResponseWriter, r *http.Request) {
-	var todo Todo
-	if r.Body == nil {
-		http.Error(w, "Please send a request body", 400)
-		return
+	id := 0
+	if i, err := strconv.Atoi(r.Form.Get("id")); err == nil {
+		id = i
 	}
-	err := json.NewDecoder(r.Body).Decode(&todo)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
+
+	switch r.Method {
+	case http.MethodPost:
+		if r.Body == nil {
+			http.Error(w, "Please send a request body", 400)
+			return
+		}
+		defer r.Body.Close()
+		decoder := json.NewDecoder(r.Body)
+		var todo Todo
+		err := decoder.Decode(&todo)
+
+		if err != nil {
+			log.Println(err)
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		e.Db.Save(&todo)
+	case http.MethodDelete:
+		if id != 0 {
+			e.Db.Delete(&Todo{}, "id = ?", id)
+		}
+	case http.MethodGet:
+		if id == 0 {
+			var todos []Todo
+			e.Db.Model(&Todo{}).Find(&todos)
+			json.NewEncoder(w).Encode(todos)
+		} else {
+			var todo Todo
+			e.Db.Model(&Todo{}).Where("id = ?", id).Find(&todo)
+			json.NewEncoder(w).Encode(todo)
+		}
 	}
-	e.Db.Save(&todo)
 }

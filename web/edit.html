@@ -1,4 +1,11 @@
 <div>
+    <Busy show="busy"></Busy>
+
     <h1>Todo Edit</h1>
+
+    <input type="text" tng-bind="todo.Title" tng-model="todo.Title">
+    <textarea tng-bind="todo.Content" tng-model="todo.Content"></textarea>
+
     <button tng-click="cancel">cancel</button>
+    <button tng-click="save">save</button>
 </div>

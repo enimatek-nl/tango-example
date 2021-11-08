@@ -3,6 +3,7 @@ package web
 import (
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	"github.com/enimatek-nl/tango"
 	"github.com/enimatek-nl/tango-example/server"
 	"net/http"
@@ -32,7 +33,20 @@ func (i IndexController) Constructor(hook tango.Hook) bool {
 	})
 	hook.Scope.SetFunc("edit", func(value js.Value, scope *tango.Scope) {
 		if id, found := scope.Get("todo.ID"); found {
-			hook.Self.Nav("/edit/" + id.String())
+			hook.Self.Nav("/edit/" + fmt.Sprintf("%d", id.Int()))
+		}
+	})
+	hook.Scope.SetFunc("delete", func(value js.Value, scope *tango.Scope) {
+		if id, found := scope.Get("todo.ID"); found {
+			hook.Scope.Set("busy", true)
+			go func() {
+				req, _ := http.NewRequest(http.MethodDelete, "/api/todo?id="+fmt.Sprintf("%d", id.Int()), nil)
+				if _, err := http.DefaultClient.Do(req); err == nil {
+					refresh(&hook)
+				} else {
+					println(err)
+				}
+			}()
 		}
 	})
 	return true
@@ -41,18 +55,22 @@ func (i IndexController) Constructor(hook tango.Hook) bool {
 func (i IndexController) BeforeRender(hook tango.Hook) {}
 
 func (i IndexController) AfterRender(hook tango.Hook) {
-	go func() {
-		if resp, err := http.Get("/api/get"); err == nil {
-			var todos []server.Todo
-			// load all todos from api-backend
-			defer resp.Body.Close()
-			json.NewDecoder(resp.Body).Decode(&todos)
-			hook.Scope.Set("todos", todos)
-			// remove loading overlay
-			hook.Scope.Set("busy", false)
-			hook.Scope.Digest()
-		}
-	}()
+	go refresh(&hook)
+}
+
+func refresh(hook *tango.Hook) {
+	if resp, err := http.Get("/api/todo"); err == nil {
+		defer resp.Body.Close()
+
+		// load all todos from api-backend
+		var todos []server.Todo
+		json.NewDecoder(resp.Body).Decode(&todos)
+		hook.Scope.Set("todos", todos)
+
+		// remove loading overlay
+		hook.Scope.Set("busy", false)
+		hook.Scope.Digest()
+	}
 }
 
 func (i IndexController) Render() string {

@@ -1,13 +1,17 @@
 <div>
     <h1>Todo's</h1>
     <Busy show="busy"></Busy>
-    <button tng-click="add">add</button>
 
     <table>
         <tr tng-repeat="todo in todos">
+            <td><button tng-click="delete">X</button></td>
+            <td tng-bind="todo.ID"></td>
             <td tng-bind="todo.Title"></td>
             <td tng-bind="todo.Content"></td>
             <td><button tng-click="edit">edit</button></td>
         </tr>
     </table>
+
+    <button tng-click="add">+ new</button>
+
 </div>
