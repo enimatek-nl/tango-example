@@ -9,7 +9,7 @@ const SHOW = "show"
 
 type Busy struct{}
 
-func (l Busy) Config() tango.ComponentConfig {
+func (b Busy) Config() tango.ComponentConfig {
 	return tango.ComponentConfig{
 		Name:   "Busy",
 		Kind:   tango.Tag,
@@ -19,16 +19,13 @@ func (l Busy) Config() tango.ComponentConfig {
 
 func (b Busy) Constructor(hook tango.Hook) bool {
 	if v, e := hook.Attrs[SHOW]; e {
-		hook.Scope.Subscribe(
-			v,
-			func(scope *tango.Scope, value js.Value) {
-				if value.Bool() {
-					hook.Node.Get("style").Set("display", "block")
-				} else {
-					hook.Node.Get("style").Set("display", "none")
-				}
-			},
-		)
+		hook.Scope.Subscribe(v, func(scope *tango.Scope, value js.Value) {
+			if value.Bool() {
+				hook.Node.Get("style").Set("display", "block")
+			} else {
+				hook.Node.Get("style").Set("display", "none")
+			}
+		})
 	} else {
 		panic("don't forget to set the '" + SHOW + "' attr")
 	}
@@ -43,7 +40,7 @@ func (b Busy) AfterRender(hook tango.Hook) {}
 func (b Busy) Render() string {
 	return `
             <div class="loading">
-                <img width="64" height="64" src="gifs/loading.gif"></img>
+                <img width="64" height="64" src="loading.gif"></img>
             </div>
 `
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/enimatek-nl/tango"
 	"github.com/enimatek-nl/tango-example/server"
 	"net/http"
-	"syscall/js"
 )
 
 //go:embed index.html
@@ -28,26 +27,31 @@ func (i IndexController) Constructor(hook tango.Hook) bool {
 	hook.Scope.Set("busy", true) // enable loading overlay
 	hook.Scope.Set("todos", []server.Todo{})
 	// functions
-	hook.Scope.SetFunc("add", func(value js.Value, scope *tango.Scope) {
+	hook.Scope.SetFunc("add", func(hook *tango.Hook) {
 		hook.Self.Nav("/edit/0")
 	})
-	hook.Scope.SetFunc("edit", func(value js.Value, scope *tango.Scope) {
-		if id, found := scope.Get("todo.ID"); found {
+	hook.Scope.SetFunc("edit", func(hook *tango.Hook) {
+		if id, found := hook.Scope.Get("todo.ID"); found {
 			hook.Self.Nav("/edit/" + fmt.Sprintf("%d", id.Int()))
 		}
 	})
-	hook.Scope.SetFunc("delete", func(value js.Value, scope *tango.Scope) {
-		if id, found := scope.Get("todo.ID"); found {
-			hook.Scope.Set("busy", true)
-			go func() {
+	hook.Scope.SetFunc("delete", func(local *tango.Hook) {
+		hook.Scope.Set("busy", true)
+		go func() {
+			if id, found := local.Scope.Get("todo.ID"); found {
 				req, _ := http.NewRequest(http.MethodDelete, "/api/todo?id="+fmt.Sprintf("%d", id.Int()), nil)
 				if _, err := http.DefaultClient.Do(req); err == nil {
 					refresh(&hook)
 				} else {
-					println(err)
+					hook.Scope.Set("info", err.Error())
+					hook.Scope.Set("modal", true)
 				}
-			}()
-		}
+				hook.Scope.Set("busy", false)
+				hook.Scope.Digest()
+			} else {
+				println("todo ID not found")
+			}
+		}()
 	})
 	return true
 }
@@ -55,6 +59,7 @@ func (i IndexController) Constructor(hook tango.Hook) bool {
 func (i IndexController) BeforeRender(hook tango.Hook) {}
 
 func (i IndexController) AfterRender(hook tango.Hook) {
+	hook.Scope.Set("busy", true)
 	go refresh(&hook)
 }
 

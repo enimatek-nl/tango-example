@@ -7,7 +7,6 @@ import (
 	"github.com/enimatek-nl/tango-example/server"
 	"net/http"
 	"strings"
-	"syscall/js"
 )
 
 //go:embed edit.html
@@ -26,10 +25,10 @@ func (e EditController) Config() tango.ComponentConfig {
 func (e EditController) Constructor(hook tango.Hook) bool {
 	hook.Scope.Set("busy", false)
 	hook.Scope.Set("todo", server.Todo{})
-	hook.Scope.SetFunc("cancel", func(value js.Value, scope *tango.Scope) {
+	hook.Scope.SetFunc("cancel", func(hook *tango.Hook) {
 		hook.Self.Nav("/")
 	})
-	hook.Scope.SetFunc("save", func(value js.Value, scope *tango.Scope) {
+	hook.Scope.SetFunc("save", func(hook *tango.Hook) {
 		hook.Scope.Set("busy", true)
 		go func() {
 			r := strings.NewReader(

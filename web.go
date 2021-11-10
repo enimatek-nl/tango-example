@@ -17,7 +17,8 @@ func main() {
 		std.Change{},
 		std.Model{},
 		std.Attr{},
-		web.Busy{})
+		web.Busy{},
+		web.Modal{})
 
 	tg.AddRoutes(
 		tango.NewRoute("/", &web.IndexController{}),
