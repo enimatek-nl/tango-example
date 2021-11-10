@@ -29,7 +29,8 @@ func main() {
 	api := server.Api{Db: db}
 	http.HandleFunc("/api", api.Index)
 	http.HandleFunc("/api/todo", api.Process)
-	http.Handle("/", http.FileServer(http.Dir(`./web/static/`)))
+
+	http.Handle("/", http.FileServer(http.Dir(`./web/static/`))) // exposing the static pages (wasm file)
 
 	log.Fatal(http.ListenAndServe(":8000", nil))
 }
