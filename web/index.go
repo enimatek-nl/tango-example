@@ -22,32 +22,31 @@ func (i IndexController) Config() tango.ComponentConfig {
 	}
 }
 
-func (i IndexController) Constructor(hook tango.Hook) bool {
-	// variables
-	hook.Scope.Set("busy", true) // enable loading overlay
-	hook.Scope.Set("todos", []server.Todo{})
+func (i *IndexController) Constructor(tng tango.Hook) bool {
 	// functions
-	hook.Scope.SetFunc("add", func(hook *tango.Hook) {
-		hook.Self.Nav("/edit/0")
+	tng.Set("todos", []server.Todo{})
+	tng.Set("busy", false)
+	tng.SetFunc("add", func(loc *tango.Hook) {
+		loc.Self.Nav("/edit/0")
 	})
-	hook.Scope.SetFunc("edit", func(hook *tango.Hook) {
-		if id, found := hook.Scope.Get("todo.ID"); found {
-			hook.Self.Nav("/edit/" + fmt.Sprintf("%d", id.Int()))
+	tng.SetFunc("edit", func(loc *tango.Hook) {
+		if id, found := loc.Get("todo.ID"); found {
+			loc.Self.Nav("/edit/" + fmt.Sprintf("%d", id.Int()))
 		}
 	})
-	hook.Scope.SetFunc("delete", func(local *tango.Hook) {
-		hook.Scope.Set("busy", true)
+	tng.SetFunc("delete", func(loc *tango.Hook) {
+		tng.Set("busy", true)
 		go func() {
-			if id, found := local.Scope.Get("todo.ID"); found {
+			if id, found := loc.Get("todo.ID"); found {
 				req, _ := http.NewRequest(http.MethodDelete, "/api/todo?id="+fmt.Sprintf("%d", id.Int()), nil)
 				if _, err := http.DefaultClient.Do(req); err == nil {
-					refresh(&hook)
+					refresh(&tng)
 				} else {
-					hook.Scope.Set("info", err.Error())
-					hook.Scope.Set("modal", true)
+					tng.Set("info", err.Error())
+					tng.Set("modal", true)
 				}
-				hook.Scope.Set("busy", false)
-				hook.Scope.Digest()
+				tng.Set("busy", false)
+				tng.Scope.Digest()
 			} else {
 				println("todo ID not found")
 			}
@@ -56,25 +55,25 @@ func (i IndexController) Constructor(hook tango.Hook) bool {
 	return true
 }
 
-func (i IndexController) BeforeRender(hook tango.Hook) {}
+func (i IndexController) BeforeRender(tng tango.Hook) {}
 
-func (i IndexController) AfterRender(hook tango.Hook) {
-	hook.Scope.Set("busy", true)
-	go refresh(&hook)
+func (i IndexController) AfterRender(tng tango.Hook) {
+	tng.Set("busy", true)
+	go refresh(&tng)
 }
 
-func refresh(hook *tango.Hook) {
+func refresh(tng *tango.Hook) {
 	if resp, err := http.Get("/api/todo"); err == nil {
 		defer resp.Body.Close()
 
 		// load all todos from api-backend
 		var todos []server.Todo
 		json.NewDecoder(resp.Body).Decode(&todos)
-		hook.Scope.Set("todos", todos)
+		tng.Set("todos", todos)
 
 		// remove loading overlay
-		hook.Scope.Set("busy", false)
-		hook.Scope.Digest()
+		tng.Set("busy", false)
+		tng.Scope.Digest()
 	}
 }
 
