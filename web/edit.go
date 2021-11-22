@@ -12,7 +12,12 @@ import (
 //go:embed edit.html
 var tmplEdit string
 
-type EditController struct{}
+type EditController struct {
+	Busy   bool        `tng:"busy"`
+	Todo   server.Todo `tng:"todo"`
+	Cancel tango.SFunc `tng:"cancel"`
+	Save   tango.SFunc `tng:"save"`
+}
 
 func (e EditController) Config() tango.ComponentConfig {
 	return tango.ComponentConfig{
@@ -22,13 +27,15 @@ func (e EditController) Config() tango.ComponentConfig {
 	}
 }
 
-func (e EditController) Constructor(hook tango.Hook) bool {
-	hook.Scope.Set("busy", false)
-	hook.Scope.Set("todo", server.Todo{})
-	hook.Scope.SetFunc("cancel", func(hook *tango.Hook) {
+func (e *EditController) Constructor(hook tango.Hook) bool {
+	e.Busy = true
+	e.Todo = server.Todo{}
+
+	e.Cancel = func(hook *tango.Hook) {
 		hook.Self.Nav("/")
-	})
-	hook.Scope.SetFunc("save", func(hook *tango.Hook) {
+	}
+
+	e.Save = func(hook *tango.Hook) {
 		hook.Scope.Set("busy", true)
 		go func() {
 			r := strings.NewReader(
@@ -37,23 +44,24 @@ func (e EditController) Constructor(hook tango.Hook) bool {
 			http.Post("/api/todo", "application/json", r)
 			hook.Self.Nav("/")
 		}()
-	})
+	}
+
+	hook.Absorb(e)
 	return true
 }
 
 func (e EditController) BeforeRender(hook tango.Hook) {}
 
-func (e EditController) AfterRender(hook tango.Hook) {
+func (e *EditController) AfterRender(hook tango.Hook) {
 	go func() {
-		if i, e := hook.Attrs["id"]; e {
+		if i, o := hook.Attrs["id"]; o {
 			if resp, err := http.Get("/api/todo?id=" + i); err == nil {
-				var todo server.Todo
 				defer resp.Body.Close()
-				json.NewDecoder(resp.Body).Decode(&todo)
-				hook.Scope.Set("todo", todo)
-				hook.Scope.Digest()
+				json.NewDecoder(resp.Body).Decode(&e.Todo)
 			}
 		}
+		e.Busy = false
+		hook.Absorb(e)
 	}()
 }
 
