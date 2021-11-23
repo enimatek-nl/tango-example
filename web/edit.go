@@ -7,6 +7,7 @@ import (
 	"github.com/enimatek-nl/tango-example/server"
 	"net/http"
 	"strings"
+	"syscall/js"
 )
 
 //go:embed edit.html
@@ -28,14 +29,13 @@ func (e EditController) Config() tango.ComponentConfig {
 }
 
 func (e *EditController) Constructor(hook tango.Hook) bool {
-	e.Busy = true
 	e.Todo = server.Todo{}
 
-	e.Cancel = func(hook *tango.Hook) {
-		hook.Self.Nav("/")
+	e.Cancel = func(self *tango.Tango, this js.Value, local *tango.Scope) {
+		self.Nav("/")
 	}
 
-	e.Save = func(hook *tango.Hook) {
+	e.Save = func(self *tango.Tango, this js.Value, local *tango.Scope) {
 		hook.Scope.Set("busy", true)
 		go func() {
 			r := strings.NewReader(
@@ -46,13 +46,15 @@ func (e *EditController) Constructor(hook tango.Hook) bool {
 		}()
 	}
 
-	hook.Absorb(e)
 	return true
 }
 
-func (e EditController) BeforeRender(hook tango.Hook) {}
+func (e EditController) Render() string {
+	return tmplEdit
+}
 
-func (e *EditController) AfterRender(hook tango.Hook) {
+func (e *EditController) AfterRender(hook tango.Hook) bool {
+	e.Busy = true
 	go func() {
 		if i, o := hook.Attrs["id"]; o {
 			if resp, err := http.Get("/api/todo?id=" + i); err == nil {
@@ -61,10 +63,7 @@ func (e *EditController) AfterRender(hook tango.Hook) {
 			}
 		}
 		e.Busy = false
-		hook.Absorb(e)
+		hook.Digest(e)
 	}()
-}
-
-func (e EditController) Render() string {
-	return tmplEdit
+	return true
 }

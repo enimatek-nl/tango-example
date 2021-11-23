@@ -7,6 +7,7 @@ import (
 	"github.com/enimatek-nl/tango"
 	"github.com/enimatek-nl/tango-example/server"
 	"net/http"
+	"syscall/js"
 )
 
 //go:embed index.html
@@ -34,61 +35,57 @@ func (i *IndexController) Constructor(tng tango.Hook) bool {
 	i.Modal = false
 	i.ModalInfo = ""
 	i.Todos = []server.Todo{}
-	i.Busy = true
 
-	i.Add = func(loc *tango.Hook) {
-		loc.Self.Nav("/edit/0")
+	i.Add = func(self *tango.Tango, this js.Value, local *tango.Scope) {
+		self.Nav("/edit/0")
 	}
 
-	i.Edit = func(loc *tango.Hook) {
-		if id, found := loc.Get("todo.ID"); found {
-			loc.Self.Nav("/edit/" + fmt.Sprintf("%d", id.Int()))
+	i.Edit = func(self *tango.Tango, this js.Value, local *tango.Scope) {
+		if id, found := local.Get("todo.ID"); found {
+			self.Nav("/edit/" + fmt.Sprintf("%d", id.Int()))
 		}
 	}
 
-	i.Delete = func(loc *tango.Hook) {
+	i.Delete = func(self *tango.Tango, this js.Value, local *tango.Scope) {
 		i.Busy = true
 		go func() {
-			if id, found := loc.Get("todo.ID"); found {
+			if id, found := local.Get("todo.ID"); found {
 				req, _ := http.NewRequest(http.MethodDelete, "/api/todo?id="+fmt.Sprintf("%d", id.Int()), nil)
 				if _, err := http.DefaultClient.Do(req); err == nil {
-					refresh(i, tng.Scope)
+					refresh(i, tng)
 				} else {
 					i.Modal = true
 					i.ModalInfo = err.Error()
 				}
 				i.Busy = false
-				tng.Absorb(i)
+				tng.Digest(i)
 			} else {
 				println("todo ID not found")
 			}
 		}()
-		tng.Absorb(i)
+		tng.Digest(i)
 	}
 
-	tng.Absorb(i)
 	return true
 }
 
-func (i IndexController) BeforeRender(tng tango.Hook) {}
-
-func (i *IndexController) AfterRender(tng tango.Hook) {
-	go refresh(i, tng.Scope)
-}
-
-func refresh(i *IndexController, s *tango.Scope) {
+func refresh(i *IndexController, h tango.Hook) {
 	if resp, err := http.Get("/api/todo"); err == nil {
 		defer resp.Body.Close()
-
 		// load all todos from api-backend
 		json.NewDecoder(resp.Body).Decode(&i.Todos)
-
+		//time.Sleep(time.Second * 1)
 		i.Busy = false
-
-		s.Absorb(i)
+		h.Digest(i)
 	}
 }
 
 func (i IndexController) Render() string {
 	return tmplIndex
+}
+
+func (i *IndexController) AfterRender(tng tango.Hook) bool {
+	i.Busy = true
+	go refresh(i, tng)
+	return true
 }

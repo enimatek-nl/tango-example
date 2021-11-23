@@ -33,14 +33,14 @@ func (b Busy) Constructor(hook tango.Hook) bool {
 	return true
 }
 
-func (b Busy) BeforeRender(hook tango.Hook) {}
-
-func (b Busy) AfterRender(hook tango.Hook) {}
-
 func (b Busy) Render() string {
 	return `
             <div class="loading">
                 <img width="64" height="64" src="loading.gif"></img>
             </div>
 `
+}
+
+func (b Busy) AfterRender(hook tango.Hook) bool {
+	return false
 }

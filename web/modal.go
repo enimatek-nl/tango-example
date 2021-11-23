@@ -48,10 +48,6 @@ func (m Modal) Constructor(hook tango.Hook) bool {
 	return true
 }
 
-func (m Modal) BeforeRender(hook tango.Hook) {}
-
-func (m Modal) AfterRender(hook tango.Hook) {}
-
 func (m Modal) Render() string {
 	return `
 <div id="myModal" class="modal">
@@ -59,4 +55,8 @@ func (m Modal) Render() string {
     <p tng-bind="content"></p>
   </div>
 </div>`
+}
+
+func (m Modal) AfterRender(hook tango.Hook) bool {
+	return false
 }
